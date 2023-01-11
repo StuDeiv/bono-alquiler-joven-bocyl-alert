@@ -1,0 +1,59 @@
+name: Scrape BOCyL 
+env:
+  GMAIL_USER: ${{ secrets.GMAIL_USER }}
+  GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+  GMAIL_SUBSCRIBERS: ${{ secrets.GMAIL_SUBSCRIBERS }}
+on:
+  workflow_dispatch:
+
+  repository_dispatch:
+    types:
+      - webhook
+
+  schedule:
+    - cron: '30 8 * * 1-5'
+    
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  generate-env-file:
+    runs-on: ubuntu-latest
+    name: 'Generate env files'
+    env:
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+      GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+      GMAIL_SUBSCRIBERS: ${{ secrets.GMAIL_SUBSCRIBERS }}
+    steps:
+      - name: 'Create env file'
+        run: |
+          touch .env
+          echo GMAIL_USER=${{ secrets.GMAIL_USER }} >> .env
+          echo GMAIL_PASS=${{ secrets.GMAIL_PASS }} >> .env
+          echo GMAIL_SUBSCRIBERS=${{ secrets.GMAIL_SUBSCRIBERS }} >> .env
+          cat .env
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+      GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+      GMAIL_SUBSCRIBERS: ${{ secrets.GMAIL_SUBSCRIBERS }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7.18.2
+          run_install: true
+      - run: |
+          touch .env
+          echo GMAIL_USER=${{ secrets.GMAIL_USER }} >> .env
+          echo GMAIL_PASS=${{ secrets.GMAIL_PASS }} >> .env
+          echo GMAIL_SUBSCRIBERS=${{ secrets.GMAIL_SUBSCRIBERS }} >> .env
+          cat .env
+          npm start
+          git config user.name bocyl-bot
+          git diff --quiet && git diff --staged --quiet || git commit -am "[bot] update Bono Alquiler Joven news"
+          git push origin main
